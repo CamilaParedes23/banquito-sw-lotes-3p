@@ -1,0 +1,7 @@
+target/
+build/
+.env
+.env.*
+*.log
+logs/
+
