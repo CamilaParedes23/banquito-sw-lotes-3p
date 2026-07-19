@@ -123,6 +123,7 @@
                         <exclude>**/client/**</exclude>
                         <exclude>**/controller/**</exclude>
                         <exclude>**/Rabbit*EventPublisher.class</exclude>
+                        <exclude>**/*Application.class</exclude>
                     </excludes>
                 </configuration>
                 <executions>
