@@ -7,9 +7,11 @@ import com.banquito.switchpagos.batch.dto.event.PaymentLineRoutedOnUsEvent;
 import com.banquito.switchpagos.batch.service.PaymentLineEventPublisher;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
+@ConditionalOnProperty(name = "messaging.provider", havingValue = "rabbitmq", matchIfMissing = true)
 public class RabbitPaymentLineEventPublisher implements PaymentLineEventPublisher {
 
     private final RabbitTemplate rabbitTemplate;

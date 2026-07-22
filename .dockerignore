@@ -7,3 +7,6 @@ mvnw.cmd
 *.iml
 .idea
 .vscode
+application_default_credentials.json
+*.pem
+*.key

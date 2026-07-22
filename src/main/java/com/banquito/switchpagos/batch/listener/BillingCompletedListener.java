@@ -7,6 +7,7 @@ import com.banquito.switchpagos.batch.repository.PaymentBatchRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(name = "messaging.provider", havingValue = "rabbitmq", matchIfMissing = true)
 public class BillingCompletedListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(BillingCompletedListener.class);

@@ -1,7 +1,9 @@
 target/
+application_default_credentials.json
+*.pem
+*.key
 build/
 .env
 .env.*
 *.log
 logs/
-
