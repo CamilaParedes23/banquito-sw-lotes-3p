@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -158,6 +159,154 @@ class BatchProcessingServiceImplTest {
         assertEquals("DUPLICATE_BATCH", errorsCaptor.getValue().getFirst().getCode());
         verify(coreBankingClient, never()).requestFunding(any(CoreFundingRequest.class));
         assertEquals(BatchStatus.RECHAZADO.name(), batch.getStatus());
+    }
+
+    // ==================== CASOS NEGATIVOS ADICIONALES (70%) ====================
+
+    @Test
+    void shouldRejectBatchWhenCompanyIsInactive() {
+        // Given
+        PaymentBatch batch = batch();
+        UUID customerUuid = UUID.randomUUID();
+        when(paymentBatchRepository.findById(batch.getBatchId())).thenReturn(Optional.of(batch));
+        when(coreCustomerClient.findByIdentification("1792103456001"))
+                .thenReturn(customer(customerUuid, "INACTIVO", true));
+
+        // When
+        service.processBatch(batch.getBatchId(), validEmptyBatch());
+
+        // Then
+        verify(coreBankingClient, never()).requestFunding(any());
+        assertEquals(BatchStatus.RECHAZADO.name(), batch.getStatus());
+        assertTrue(batch.getRejectionReason().startsWith("COMPANY_INACTIVE:"));
+    }
+
+    @Test
+    void shouldRejectBatchWhenSourceAccountIsInactive() {
+        // Given
+        PaymentBatch batch = batch();
+        UUID customerUuid = UUID.randomUUID();
+        when(paymentBatchRepository.findById(batch.getBatchId())).thenReturn(Optional.of(batch));
+        when(coreCustomerClient.findByIdentification("1792103456001"))
+                .thenReturn(customer(customerUuid, "ACTIVO", true));
+        CoreCompanyAccountValidationResponse validation = validCompanyAccount(customerUuid);
+        validation.setAccountStatus("INACTIVA");
+        when(companyAccountValidationClient.validate(
+                customerUuid.toString(),
+                "0010000010599",
+                BigDecimal.TEN)).thenReturn(validation);
+
+        // When
+        service.processBatch(batch.getBatchId(), validEmptyBatch());
+
+        // Then
+        verify(coreBankingClient, never()).requestFunding(any());
+        assertEquals(BatchStatus.RECHAZADO.name(), batch.getStatus());
+        assertTrue(batch.getRejectionReason().startsWith("SOURCE_ACCOUNT_INACTIVE:"));
+    }
+
+    @Test
+    void shouldRejectBatchWhenSourceAccountNotEligibleForMassPayments() {
+        // Given
+        PaymentBatch batch = batch();
+        UUID customerUuid = UUID.randomUUID();
+        when(paymentBatchRepository.findById(batch.getBatchId())).thenReturn(Optional.of(batch));
+        when(coreCustomerClient.findByIdentification("1792103456001"))
+                .thenReturn(customer(customerUuid, "ACTIVO", true));
+        CoreCompanyAccountValidationResponse validation = validCompanyAccount(customerUuid);
+        validation.setMassPaymentMainAccount(false);
+        when(companyAccountValidationClient.validate(
+                customerUuid.toString(),
+                "0010000010599",
+                BigDecimal.TEN)).thenReturn(validation);
+
+        // When
+        service.processBatch(batch.getBatchId(), validEmptyBatch());
+
+        // Then
+        verify(coreBankingClient, never()).requestFunding(any());
+        assertEquals(BatchStatus.RECHAZADO.name(), batch.getStatus());
+        assertTrue(batch.getRejectionReason().startsWith("SOURCE_ACCOUNT_NOT_ELIGIBLE:"));
+    }
+
+    @Test
+    void shouldRejectBatchWhenInsufficientFunds() {
+        // Given
+        PaymentBatch batch = batch();
+        UUID customerUuid = UUID.randomUUID();
+        when(paymentBatchRepository.findById(batch.getBatchId())).thenReturn(Optional.of(batch));
+        when(coreCustomerClient.findByIdentification("1792103456001"))
+                .thenReturn(customer(customerUuid, "ACTIVO", true));
+        CoreCompanyAccountValidationResponse validation = validCompanyAccount(customerUuid);
+        validation.setAmountCovered(false);
+        when(companyAccountValidationClient.validate(
+                customerUuid.toString(),
+                "0010000010599",
+                BigDecimal.TEN)).thenReturn(validation);
+
+        // When
+        service.processBatch(batch.getBatchId(), validEmptyBatch());
+
+        // Then
+        verify(coreBankingClient, never()).requestFunding(any());
+        assertEquals(BatchStatus.RECHAZADO.name(), batch.getStatus());
+        assertFalse(validation.getAmountCovered()); // Verifica que el monto no está cubierto
+    }
+
+    // ==================== CASOS LÍMITE (20%) ====================
+
+    @Test
+    void shouldHandleEmptyBatchSuccessfully() {
+        // Given
+        PaymentBatch batch = batch();
+        batch.setTotalRecords(0);
+        batch.setControlAmount(BigDecimal.ZERO);
+        UUID customerUuid = UUID.randomUUID();
+        ParsedBatchFile parsedBatchFile = validEmptyBatch();
+        parsedBatchFile.setCompanyCustomerUuid(customerUuid.toString());
+        CoreFundingResponse fundingResponse = new CoreFundingResponse();
+        fundingResponse.setCoreFundingId(UUID.randomUUID().toString());
+        fundingResponse.setStatus("ACTIVA");
+        fundingResponse.setAccountingDate(LocalDate.of(2026, 6, 5));
+        when(paymentBatchRepository.findById(batch.getBatchId())).thenReturn(Optional.of(batch));
+        when(companyAccountValidationClient.validate(
+                customerUuid.toString(),
+                "0010000010599",
+                BigDecimal.ZERO)).thenReturn(validCompanyAccount(customerUuid));
+        when(coreBankingClient.requestFunding(any(CoreFundingRequest.class))).thenReturn(fundingResponse);
+
+        // When
+        service.processBatch(batch.getBatchId(), parsedBatchFile);
+
+        // Then
+        assertEquals(BatchStatus.PROCESANDO_LINEAS.name(), batch.getStatus());
+        verify(coreBankingClient).requestFunding(any());
+    }
+
+    @Test
+    void shouldHandleLargeBatchWithMaximumRecords() {
+        // Given - Batch con metadata de 10,000 líneas pero sin líneas reales
+        PaymentBatch batch = batch();
+        batch.setTotalRecords(10000);
+        batch.setControlAmount(new BigDecimal("500000.00"));
+        UUID customerUuid = UUID.randomUUID();
+        ParsedBatchFile parsedBatchFile = validEmptyBatch();
+        parsedBatchFile.setCompanyCustomerUuid(customerUuid.toString());
+        parsedBatchFile.setHeaderTotalRecords(10000);
+        parsedBatchFile.setHeaderControlAmount(new BigDecimal("500000.00"));
+        
+        when(paymentBatchRepository.findById(batch.getBatchId())).thenReturn(Optional.of(batch));
+        when(companyAccountValidationClient.validate(
+                customerUuid.toString(),
+                "0010000010599",
+                new BigDecimal("500000.00"))).thenReturn(validCompanyAccount(customerUuid));
+
+        // When
+        service.processBatch(batch.getBatchId(), parsedBatchFile);
+
+        // Then - Sin líneas reales, el batch será rechazado por inconsistencia
+        assertEquals(BatchStatus.RECHAZADO.name(), batch.getStatus());
+        verify(coreBankingClient, never()).requestFunding(any());
     }
 
     private PaymentBatch batch() {
