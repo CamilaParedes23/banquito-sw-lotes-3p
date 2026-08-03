@@ -35,6 +35,7 @@ public class CoreKongTokenProvider {
 
     public CoreKongTokenProvider(
             @Value("${core.kong.base-url}") String baseUrl,
+            @Value("${core.kong.api-key}") String apiKey,
             @Value("${core.kong.auth-token}") String manualAuthToken,
             @Value("${core.kong.client-token.enabled}") Boolean clientTokenEnabled,
             @Value("${core.kong.client-id}") String clientId,
@@ -47,10 +48,13 @@ public class CoreKongTokenProvider {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
         requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
-        this.restClient = RestClient.builder()
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(normalizeBaseUrl(baseUrl))
-                .requestFactory(requestFactory)
-                .build();
+                .requestFactory(requestFactory);
+        if (StringUtils.hasText(apiKey)) {
+            builder.defaultHeader("x-api-key", apiKey.trim());
+        }
+        this.restClient = builder.build();
         this.manualAuthToken = manualAuthToken == null ? "" : manualAuthToken.trim();
         this.clientTokenEnabled = clientTokenEnabled;
         this.clientId = clientId;

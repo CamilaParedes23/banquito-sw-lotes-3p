@@ -13,6 +13,7 @@ class CoreKongTokenProviderTest {
     private final CoreKongTokenProvider provider = new CoreKongTokenProvider(
             "http://localhost:8000",
             "",
+            "",
             true,
             "switch-pagos-internos-service",
             "secret",
