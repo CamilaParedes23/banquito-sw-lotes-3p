@@ -11,7 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(name = "messaging.provider", havingValue = "rabbitmq", matchIfMissing = true)
+@ConditionalOnProperty(name = "messaging.provider", havingValue = "rabbitmq")
 public class RabbitPaymentLineEventPublisher implements PaymentLineEventPublisher {
 
     private final RabbitTemplate rabbitTemplate;

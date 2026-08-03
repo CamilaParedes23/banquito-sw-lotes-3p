@@ -28,8 +28,8 @@ public class CoreCompanyAccountValidationClient {
     public CoreCompanyAccountValidationClient(
             @Qualifier("coreKongRestClient") RestClient coreKongRestClient,
             CoreKongTokenProvider tokenProvider,
-            @Value("${core.kong.company-account-validation-path}") String companyAccountValidationPath,
-            @Value("${core.kong.company-account-validation-required-scope}") String requiredScope) {
+            @Value("${core.api-gateway.company-account-validation-path}") String companyAccountValidationPath,
+            @Value("${core.api-gateway.company-account-validation-required-scope}") String requiredScope) {
         this.coreKongRestClient = coreKongRestClient;
         this.tokenProvider = tokenProvider;
         this.companyAccountValidationPath = companyAccountValidationPath;

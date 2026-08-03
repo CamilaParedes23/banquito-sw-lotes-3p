@@ -30,27 +30,32 @@ public class CoreKongTokenProvider {
     private final String requiredScope;
     private final String clientTokenPath;
     private final Long refreshSkewSeconds;
+    private final String apiKey;
 
     private final Map<String, CachedToken> cachedTokensByScope = new HashMap<>();
 
     public CoreKongTokenProvider(
-            @Value("${core.kong.base-url}") String baseUrl,
-            @Value("${core.kong.auth-token}") String manualAuthToken,
-            @Value("${core.kong.client-token.enabled}") Boolean clientTokenEnabled,
-            @Value("${core.kong.client-id}") String clientId,
-            @Value("${core.kong.client-secret}") String clientSecret,
-            @Value("${core.kong.required-scope}") String requiredScope,
-            @Value("${core.kong.client-token-path}") String clientTokenPath,
-            @Value("${core.kong.client-token-refresh-skew-seconds}") Long refreshSkewSeconds,
-            @Value("${core.kong.connect-timeout-ms}") Long connectTimeoutMs,
-            @Value("${core.kong.read-timeout-ms}") Long readTimeoutMs) {
+            @Value("${core.api-gateway.base-url}") String baseUrl,
+            @Value("${core.api-gateway.auth-token}") String manualAuthToken,
+            @Value("${core.api-gateway.client-token.enabled}") Boolean clientTokenEnabled,
+            @Value("${core.api-gateway.client-id}") String clientId,
+            @Value("${core.api-gateway.client-secret}") String clientSecret,
+            @Value("${core.api-gateway.required-scope}") String requiredScope,
+            @Value("${core.api-gateway.client-token-path}") String clientTokenPath,
+            @Value("${core.api-gateway.client-token-refresh-skew-seconds}") Long refreshSkewSeconds,
+            @Value("${core.api-gateway.api-key:}") String apiKey,
+            @Value("${core.api-gateway.connect-timeout-ms}") Long connectTimeoutMs,
+            @Value("${core.api-gateway.read-timeout-ms}") Long readTimeoutMs) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofMillis(connectTimeoutMs));
         requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
-        this.restClient = RestClient.builder()
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(normalizeBaseUrl(baseUrl))
-                .requestFactory(requestFactory)
-                .build();
+                .requestFactory(requestFactory);
+        if (StringUtils.hasText(apiKey)) {
+            builder.defaultHeader("x-api-key", apiKey.trim());
+        }
+        this.restClient = builder.build();
         this.manualAuthToken = manualAuthToken == null ? "" : manualAuthToken.trim();
         this.clientTokenEnabled = clientTokenEnabled;
         this.clientId = clientId;
@@ -58,6 +63,7 @@ public class CoreKongTokenProvider {
         this.requiredScope = requiredScope;
         this.clientTokenPath = normalizePath(clientTokenPath);
         this.refreshSkewSeconds = refreshSkewSeconds == null ? 60L : refreshSkewSeconds;
+        this.apiKey = apiKey == null ? "" : apiKey.trim();
     }
 
     public String getBearerToken() {
@@ -69,7 +75,7 @@ public class CoreKongTokenProvider {
             return manualAuthToken;
         }
         if (!Boolean.TRUE.equals(clientTokenEnabled)) {
-            throw new IllegalStateException("Core client-token automatico deshabilitado y CORE_KONG_AUTH_TOKEN no configurado.");
+            throw new IllegalStateException("Core client-token automatico deshabilitado y CORE_API_GATEWAY_AUTH_TOKEN no configurado.");
         }
         String scope = resolveScope(operationScope);
         if (isCachedTokenValid(scope)) {
@@ -121,10 +127,10 @@ public class CoreKongTokenProvider {
 
     private void validateClientCredentials(String scope) {
         if (!StringUtils.hasText(clientId) || !StringUtils.hasText(clientSecret)) {
-            throw new IllegalStateException("CORE_KONG_CLIENT_ID y CORE_KONG_CLIENT_SECRET son requeridos para client-token automatico.");
+            throw new IllegalStateException("CORE_API_GATEWAY_CLIENT_ID y CORE_API_GATEWAY_CLIENT_SECRET son requeridos para client-token automatico.");
         }
         if (!StringUtils.hasText(scope)) {
-            throw new IllegalStateException("CORE_KONG_REQUIRED_SCOPE es requerido para client-token automatico.");
+            throw new IllegalStateException("CORE_API_GATEWAY_REQUIRED_SCOPE es requerido para client-token automatico.");
         }
     }
 
@@ -174,7 +180,10 @@ public class CoreKongTokenProvider {
     }
 
     private String normalizeBaseUrl(String baseUrl) {
-        String value = StringUtils.hasText(baseUrl) ? baseUrl.trim() : "http://localhost:8000";
+        if (!StringUtils.hasText(baseUrl)) {
+            throw new IllegalStateException("CORE_API_GATEWAY_BASE_URL es requerido.");
+        }
+        String value = baseUrl.trim();
         return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 

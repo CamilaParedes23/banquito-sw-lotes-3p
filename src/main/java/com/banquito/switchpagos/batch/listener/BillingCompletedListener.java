@@ -15,7 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Component
-@ConditionalOnProperty(name = "messaging.provider", havingValue = "rabbitmq", matchIfMissing = true)
+@ConditionalOnProperty(name = "messaging.provider", havingValue = "rabbitmq")
 public class BillingCompletedListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(BillingCompletedListener.class);

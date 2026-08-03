@@ -26,8 +26,8 @@ public class CoreAccountClient {
     public CoreAccountClient(
             @Qualifier("coreKongRestClient") RestClient coreKongRestClient,
             CoreKongTokenProvider tokenProvider,
-            @Value("${core.kong.account-by-number-path}") String accountByNumberPath,
-            @Value("${core.kong.account-required-scope}") String requiredScope) {
+            @Value("${core.api-gateway.account-by-number-path}") String accountByNumberPath,
+            @Value("${core.api-gateway.account-required-scope}") String requiredScope) {
         this.coreKongRestClient = coreKongRestClient;
         this.tokenProvider = tokenProvider;
         this.accountByNumberPath = accountByNumberPath;

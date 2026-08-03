@@ -33,10 +33,10 @@ public class CoreBankingClient {
 
     public CoreBankingClient(
             @Qualifier("coreKongRestClient") RestClient coreKongRestClient,
-            @Value("${core.kong.switch-core-path}") String switchCorePath,
-            @Value("${core.kong.payment-reservations-path}") String paymentReservationsPath,
+            @Value("${core.api-gateway.switch-core-path}") String switchCorePath,
+            @Value("${core.api-gateway.payment-reservations-path}") String paymentReservationsPath,
             CoreKongTokenProvider tokenProvider,
-            @Value("${core.kong.reservation-create-required-scope}") String reservationCreateRequiredScope) {
+            @Value("${core.api-gateway.reservation-create-required-scope}") String reservationCreateRequiredScope) {
         this.coreKongRestClient = coreKongRestClient;
         this.switchCorePath = switchCorePath;
         this.paymentReservationsPath = paymentReservationsPath;

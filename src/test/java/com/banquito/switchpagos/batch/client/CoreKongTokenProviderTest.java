@@ -19,6 +19,7 @@ class CoreKongTokenProviderTest {
             "core.reserve.consume",
             "/api/v1/auth/client-token",
             60L,
+            "",
             1000L,
             1000L);
 
