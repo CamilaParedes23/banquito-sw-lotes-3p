@@ -41,12 +41,14 @@ jobs:
 
       - name: Trigger Infra Deploy
         run: |
-            curl -f -i -X POST \
-              -H "Authorization: Bearer ${{ secrets.DEVOPS_TOKEN }}" \
-              -H "Accept: application/vnd.github+json" \
-              https://api.github.com/repos/CamilaParedes23/banquito-infra-3p/dispatches \  -d '{
-                "event_type": "k8s-deploy-switch-back",
-                "client_payload": {
-                  "service": "banquito-sw-lotes"
-                }
-              }'
+          curl -f -i -X POST \
+            -H "Authorization: Bearer ${{ secrets.DEVOPS_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/CamilaParedes23/banquito-infra-3p/dispatches \
+            -d '{
+              "event_type": "k8s-deploy-switch-back",
+              "client_payload": {
+                "service": "banquito-sw-lotes"
+              }
+            }'
+
